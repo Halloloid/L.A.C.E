@@ -20,6 +20,7 @@ pub struct CheckImageResponse {
     pub status: &'static str,
     pub filename: String,
     pub size_bytes: usize,
+    pub blur: bool,
 }
 
 pub fn validate_image_content_type(content_type: &str) -> Result<(), ValidationError> {

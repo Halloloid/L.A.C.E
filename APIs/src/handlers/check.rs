@@ -1,11 +1,8 @@
 use axum::{extract::Multipart, http::StatusCode, response::Json};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use tracing::error;
 
-use crate::{
-    models::check::CheckImageRequest,
-    services::check::check_service,
-};
+use crate::{models::check::CheckImageRequest, services::check::check_service};
 
 pub async fn check_image(
     mut multipart: Multipart,
