@@ -1,6 +1,8 @@
 use serde::Deserialize;
 use validator::{Validate, ValidationError};
 
+use super::ocr::OcrSpaceResponse;
+
 const MAX_IMAGE_SIZE_BYTES: usize = 10 * 1024 * 1024;
 
 #[derive(Debug, Deserialize, Validate)]
@@ -21,6 +23,9 @@ pub struct CheckImageResponse {
     pub filename: String,
     pub size_bytes: usize,
     pub blur: bool,
+    pub message: &'static str,
+    pub ocr_text: Option<String>,
+    pub ocr_data: Option<OcrSpaceResponse>,
 }
 
 pub fn validate_image_content_type(content_type: &str) -> Result<(), ValidationError> {

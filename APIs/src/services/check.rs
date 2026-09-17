@@ -3,13 +3,15 @@ use nalgebra::DVector;
 use validator::Validate;
 
 use crate::models::check::{CheckImageRequest, CheckImageResponse};
+use crate::services::ocr::extract_text;
 
-const BLUR_VARIANCE_THRESHOLD: f64 = 100.0;
+const BLUR_VARIANCE_THRESHOLD: f64 = 10.0;
 
 #[derive(Debug)]
 pub enum CheckServiceError {
     Validation(validator::ValidationErrors),
     ImageProcessing(String),
+    Ocr(String),
 }
 
 impl CheckServiceError {
@@ -17,20 +19,49 @@ impl CheckServiceError {
         match self {
             Self::Validation(errors) => format!("Invalid image upload: {errors}"),
             Self::ImageProcessing(message) => message.clone(),
+            Self::Ocr(message) => format!("OCR processing failed: {message}"),
         }
     }
 }
 
-pub fn check_service(request: CheckImageRequest) -> Result<CheckImageResponse, CheckServiceError> {
+pub async fn check_service(
+    request: CheckImageRequest,
+) -> Result<CheckImageResponse, CheckServiceError> {
     request.validate().map_err(CheckServiceError::Validation)?;
 
     let blur = is_image_blurred(&request.image)?;
+
+    if blur {
+        return Ok(CheckImageResponse {
+            status: "blur_detected",
+            filename: request.filename,
+            size_bytes: request.image.len(),
+            blur: true,
+            message: "Image is blurry. Please capture or upload a clearer image.",
+            ocr_text: None,
+            ocr_data: None,
+        });
+    }
+
+    let ocr_data = extract_text(&request.image, &request.filename, &request.content_type)
+        .await
+        .map_err(|error| CheckServiceError::Ocr(error.to_string()))?;
+    let ocr_text = ocr_data
+        .parsed_results
+        .iter()
+        .map(|result| result.parsed_text.as_str())
+        .filter(|text| !text.trim().is_empty())
+        .collect::<Vec<_>>()
+        .join("\n");
 
     Ok(CheckImageResponse {
         status: "received",
         filename: request.filename,
         size_bytes: request.image.len(),
-        blur,
+        blur: false,
+        message: "Image quality accepted and OCR completed.",
+        ocr_text: Some(ocr_text),
+        ocr_data: Some(ocr_data),
     })
 }
 

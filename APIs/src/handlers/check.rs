@@ -10,6 +10,7 @@ pub async fn check_image(
     let request = extract_image_request(&mut multipart).await?;
 
     check_service(request)
+        .await
         .map(|response| Json(json!(response)))
         .map_err(|error| {
             (
