@@ -2,7 +2,8 @@ use imageproc::{filter::filter_parallel, kernel::LAPLACIAN_3X3};
 use nalgebra::DVector;
 use validator::Validate;
 
-use crate::models::check::{CheckImageRequest, CheckImageResponse};
+use crate::models::check::{CheckImageRequest, CheckImageResponse, ScaleResponse};
+use crate::services::geometry::calculate_scale;
 use crate::services::{geometry::calculate_word_geometry, ocr::extract_text};
 
 const BLUR_VARIANCE_THRESHOLD: f64 = 10.0;
@@ -12,6 +13,7 @@ pub enum CheckServiceError {
     Validation(validator::ValidationErrors),
     ImageProcessing(String),
     Ocr(String),
+    Scale(String),
 }
 
 impl CheckServiceError {
@@ -20,6 +22,7 @@ impl CheckServiceError {
             Self::Validation(errors) => format!("Invalid image upload: {errors}"),
             Self::ImageProcessing(message) => message.clone(),
             Self::Ocr(message) => format!("OCR processing failed: {message}"),
+            Self::Scale(message) => format!("Scale calculation failed: {message}"),
         }
     }
 }
@@ -41,6 +44,7 @@ pub async fn check_service(
             ocr_text: None,
             ocr_data: None,
             geometry: None,
+            scale: None,
         });
     }
 
@@ -55,6 +59,17 @@ pub async fn check_service(
         .collect::<Vec<_>>()
         .join("\n");
     let geometry = calculate_word_geometry(&ocr_data);
+    let scale = calculate_scale(
+        &geometry,
+        request.barcode_length_cm,
+        &ocr_data,
+    )
+    .ok_or_else(|| {
+        CheckServiceError::Scale(
+            "OCR.space did not return barcode coordinates, so barcode pixel length cannot be calculated"
+                .to_owned(),
+        )
+    })?;
 
     Ok(CheckImageResponse {
         status: "received",
@@ -65,6 +80,14 @@ pub async fn check_service(
         ocr_text: Some(ocr_text),
         ocr_data: Some(ocr_data),
         geometry: Some(geometry),
+        scale: Some(ScaleResponse {
+            barcode_length_cm: scale.barcode_length_cm,
+            barcode_length_px: scale.barcode_length_px,
+            pixels_per_cm: scale.pixels_per_cm,
+            calibration_source: scale.calibration_source,
+            calibration_confidence: scale.calibration_confidence,
+            word_measurements: scale.words,
+        }),
     })
 }
 

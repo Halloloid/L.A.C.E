@@ -22,3 +22,20 @@ pub struct WordGeometry {
     pub original_box: BoundingBox,
     pub deskewed_box: BoundingBox,
 }
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PhysicalWordMeasurement {
+    pub text: String,
+    pub width_cm: f64,
+    pub height_cm: f64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ScaleCalculation {
+    pub barcode_length_cm: f64,
+    pub barcode_length_px: f64,
+    pub pixels_per_cm: f64,
+    pub calibration_source: &'static str,
+    pub calibration_confidence: &'static str,
+    pub words: Vec<PhysicalWordMeasurement>,
+}

@@ -40,6 +40,9 @@ pub struct OcrSpaceParsedResult {
 
     #[serde(rename = "TextOrientation", default)]
     pub text_orientation: Option<serde_json::Value>,
+
+    #[serde(rename = "Barcode", default)]
+    pub barcodes: Vec<OcrSpaceBarcode>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -74,6 +77,33 @@ pub struct OcrSpaceWord {
     #[serde(rename = "WordText", default)]
     pub word_text: String,
 
+    #[serde(rename = "Left", default)]
+    pub left: Option<i32>,
+
+    #[serde(rename = "Top", default)]
+    pub top: Option<i32>,
+
+    #[serde(rename = "Width", default)]
+    pub width: Option<i32>,
+
+    #[serde(rename = "Height", default)]
+    pub height: Option<i32>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct OcrSpaceBarcode {
+    #[serde(rename = "BarcodeType", default)]
+    pub barcode_type: Option<String>,
+
+    #[serde(rename = "BarcodeValue", default)]
+    pub barcode_value: Option<String>,
+
+    #[serde(rename = "BarcodePosition", default)]
+    pub position: Option<OcrSpaceBarcodePosition>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct OcrSpaceBarcodePosition {
     #[serde(rename = "Left", default)]
     pub left: Option<i32>,
 

@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use validator::{Validate, ValidationError};
 
-use super::geometry::WordGeometry;
+use super::geometry::{PhysicalWordMeasurement, WordGeometry};
 use super::ocr::OcrSpaceResponse;
 
 const MAX_IMAGE_SIZE_BYTES: usize = 10 * 1024 * 1024;
@@ -16,6 +16,9 @@ pub struct CheckImageRequest {
 
     #[validate(custom(function = "validate_image_content_type"))]
     pub content_type: String,
+
+    #[validate(custom(function = "validate_positive_measurement"))]
+    pub barcode_length_cm: f64,
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -28,6 +31,17 @@ pub struct CheckImageResponse {
     pub ocr_text: Option<String>,
     pub ocr_data: Option<OcrSpaceResponse>,
     pub geometry: Option<Vec<WordGeometry>>,
+    pub scale: Option<ScaleResponse>,
+}
+
+#[derive(Debug, serde::Serialize)]
+pub struct ScaleResponse {
+    pub barcode_length_cm: f64,
+    pub barcode_length_px: f64,
+    pub pixels_per_cm: f64,
+    pub calibration_source: &'static str,
+    pub calibration_confidence: &'static str,
+    pub word_measurements: Vec<PhysicalWordMeasurement>,
 }
 
 pub fn validate_image_content_type(content_type: &str) -> Result<(), ValidationError> {
@@ -42,4 +56,12 @@ pub fn validate_image_content_type(content_type: &str) -> Result<(), ValidationE
 
 pub fn max_image_size_bytes() -> usize {
     MAX_IMAGE_SIZE_BYTES
+}
+
+pub fn validate_positive_measurement(value: f64) -> Result<(), ValidationError> {
+    if value.is_finite() && value > 0.0 {
+        Ok(())
+    } else {
+        Err(ValidationError::new("must_be_positive"))
+    }
 }

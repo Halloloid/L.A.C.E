@@ -1,7 +1,7 @@
 use nalgebra::{Matrix2, Point2, Vector2};
 
 use crate::models::{
-    geometry::{BoundingBox, Point, WordGeometry},
+    geometry::{BoundingBox, PhysicalWordMeasurement, Point, ScaleCalculation, WordGeometry},
     ocr::OcrSpaceResponse,
 };
 
@@ -36,6 +36,94 @@ pub fn calculate_word_geometry(ocr_data: &OcrSpaceResponse) -> Vec<WordGeometry>
             })
         })
         .collect()
+}
+
+pub fn calculate_scale(
+    geometry: &[WordGeometry],
+    barcode_length_cm: f64,
+    ocr_data: &OcrSpaceResponse,
+) -> Option<ScaleCalculation> {
+    let barcode_length_px = find_barcode_number_span(ocr_data)?;
+
+    let pixels_per_cm = barcode_length_px / barcode_length_cm;
+    let words = geometry
+        .iter()
+        .map(|word| PhysicalWordMeasurement {
+            text: word.text.clone(),
+            width_cm: distance(&word.deskewed_box.top_left, &word.deskewed_box.top_right)
+                / pixels_per_cm,
+            height_cm: distance(&word.deskewed_box.top_left, &word.deskewed_box.bottom_left)
+                / pixels_per_cm,
+        })
+        .collect();
+
+    Some(ScaleCalculation {
+        barcode_length_cm,
+        barcode_length_px,
+        pixels_per_cm,
+        calibration_source: "barcode_number_coordinates",
+        calibration_confidence: "measured",
+        words,
+    })
+}
+
+fn find_barcode_number_span(ocr_data: &OcrSpaceResponse) -> Option<f64> {
+    ocr_data
+        .parsed_results
+        .iter()
+        .filter_map(|result| result.text_overlay.as_ref())
+        .flat_map(|overlay| overlay.lines.iter())
+        .filter_map(|line| {
+            let mut numeric_words = line
+                .words
+                .iter()
+                .filter_map(|word| {
+                    let left = f64::from(word.left?);
+                    let width = f64::from(word.width?);
+                    let digits = word
+                        .word_text
+                        .chars()
+                        .filter(|character| character.is_ascii_digit())
+                        .count();
+
+                    if digits == 0 || width <= 0.0 {
+                        return None;
+                    }
+
+                    Some((left, left + width, digits))
+                })
+                .collect::<Vec<_>>();
+
+            if numeric_words.is_empty() {
+                return None;
+            }
+
+            numeric_words.sort_by(|first, second| first.0.total_cmp(&second.0));
+
+            let total_digits = numeric_words
+                .iter()
+                .map(|(_, _, digits)| digits)
+                .sum::<usize>();
+            let span = numeric_words.last()?.1 - numeric_words.first()?.0;
+
+            if total_digits >= 8 && span > 0.0 {
+                Some((total_digits, span))
+            } else {
+                None
+            }
+        })
+        .max_by(|first, second| {
+            first
+                .0
+                .cmp(&second.0)
+                .then_with(|| first.1.total_cmp(&second.1))
+        })
+        .map(|(_, span)| span)
+}
+
+fn distance(first: &Point, second: &Point) -> f64 {
+    let delta = Vector2::new(second.x - first.x, second.y - first.y);
+    delta.norm()
 }
 
 fn bounding_box(left: f64, top: f64, width: f64, height: f64) -> BoundingBox {
