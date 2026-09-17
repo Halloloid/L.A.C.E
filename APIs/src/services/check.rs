@@ -3,7 +3,7 @@ use nalgebra::DVector;
 use validator::Validate;
 
 use crate::models::check::{CheckImageRequest, CheckImageResponse};
-use crate::services::ocr::extract_text;
+use crate::services::{geometry::calculate_word_geometry, ocr::extract_text};
 
 const BLUR_VARIANCE_THRESHOLD: f64 = 10.0;
 
@@ -40,6 +40,7 @@ pub async fn check_service(
             message: "Image is blurry. Please capture or upload a clearer image.",
             ocr_text: None,
             ocr_data: None,
+            geometry: None,
         });
     }
 
@@ -53,6 +54,7 @@ pub async fn check_service(
         .filter(|text| !text.trim().is_empty())
         .collect::<Vec<_>>()
         .join("\n");
+    let geometry = calculate_word_geometry(&ocr_data);
 
     Ok(CheckImageResponse {
         status: "received",
@@ -62,6 +64,7 @@ pub async fn check_service(
         message: "Image quality accepted and OCR completed.",
         ocr_text: Some(ocr_text),
         ocr_data: Some(ocr_data),
+        geometry: Some(geometry),
     })
 }
 

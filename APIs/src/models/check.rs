@@ -1,6 +1,7 @@
 use serde::Deserialize;
 use validator::{Validate, ValidationError};
 
+use super::geometry::WordGeometry;
 use super::ocr::OcrSpaceResponse;
 
 const MAX_IMAGE_SIZE_BYTES: usize = 10 * 1024 * 1024;
@@ -26,6 +27,7 @@ pub struct CheckImageResponse {
     pub message: &'static str,
     pub ocr_text: Option<String>,
     pub ocr_data: Option<OcrSpaceResponse>,
+    pub geometry: Option<Vec<WordGeometry>>,
 }
 
 pub fn validate_image_content_type(content_type: &str) -> Result<(), ValidationError> {
