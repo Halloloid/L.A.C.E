@@ -10,6 +10,7 @@ pub async fn check_image(
     let request = extract_image_request(&mut multipart).await?;
 
     check_service(request)
+        .await
         .map(|response| Json(json!(response)))
         .map_err(|error| {
             (
@@ -24,34 +25,60 @@ pub async fn check_image(
 async fn extract_image_request(
     multipart: &mut Multipart,
 ) -> Result<CheckImageRequest, (StatusCode, Json<Value>)> {
-    let field = multipart
-        .next_field()
-        .await
-        .map_err(|error| {
-            error!(%error, "Failed to read multipart request");
-            bad_request("Invalid multipart request")
-        })?
-        .ok_or_else(|| bad_request("An image file is required"))?;
+    let mut image = None;
+    let mut filename = None;
+    let mut content_type = None;
+    let mut barcode_length_cm = None;
 
-    let filename = field
-        .file_name()
-        .map(str::to_owned)
-        .ok_or_else(|| bad_request("The multipart upload must contain a file"))?;
+    while let Some(field) = multipart.next_field().await.map_err(|error| {
+        error!(%error, "Failed to read multipart request");
+        bad_request("Invalid multipart request")
+    })? {
+        let field_name = field.name().map(str::to_owned);
 
-    let content_type = field
-        .content_type()
-        .map(str::to_owned)
-        .ok_or_else(|| bad_request("The uploaded file must include a content type"))?;
-
-    let image = field.bytes().await.map_err(|error| {
-        error!(%error, "Failed to read uploaded image");
-        bad_request("Unable to read uploaded image")
-    })?;
+        match field_name.as_deref() {
+            Some("image") => {
+                filename = field.file_name().map(str::to_owned);
+                content_type = field.content_type().map(str::to_owned);
+                image = Some(
+                    field
+                        .bytes()
+                        .await
+                        .map_err(|error| {
+                            error!(%error, "Failed to read uploaded image");
+                            bad_request("Unable to read uploaded image")
+                        })?
+                        .to_vec(),
+                );
+            }
+            Some("barcode_length_cm") => {
+                barcode_length_cm = Some(parse_measurement(field, "barcode_length_cm").await?);
+            }
+            _ => {}
+        }
+    }
 
     Ok(CheckImageRequest {
-        image: image.to_vec(),
-        filename,
-        content_type,
+        image: image.ok_or_else(|| bad_request("Missing image field"))?,
+        filename: filename.ok_or_else(|| bad_request("Image filename is required"))?,
+        content_type: content_type.ok_or_else(|| bad_request("Image content type is required"))?,
+        barcode_length_cm: barcode_length_cm
+            .ok_or_else(|| bad_request("Missing barcode_length_cm field"))?,
+    })
+}
+
+async fn parse_measurement(
+    field: axum::extract::multipart::Field<'_>,
+    field_name: &'static str,
+) -> Result<f64, (StatusCode, Json<Value>)> {
+    let value = field.text().await.map_err(|error| {
+        error!(%error, field = field_name, "Failed to read measurement field");
+        bad_request("Unable to read measurement field")
+    })?;
+
+    value.parse::<f64>().map_err(|error| {
+        error!(%error, field = field_name, value = %value, "Invalid measurement value");
+        bad_request("Measurement fields must contain numbers")
     })
 }
 
