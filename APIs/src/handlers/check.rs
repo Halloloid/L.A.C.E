@@ -2,7 +2,13 @@ use axum::{extract::Multipart, http::StatusCode, response::Json};
 use serde_json::{Value, json};
 use tracing::error;
 
-use crate::{models::check::CheckImageRequest, services::check::check_service};
+use crate::{
+    models::check::CheckImageRequest,
+    services::{
+        check::{CheckServiceError, check_service},
+        ocr::OcrError,
+    },
+};
 
 pub async fn check_image(
     mut multipart: Multipart,
@@ -14,12 +20,25 @@ pub async fn check_image(
         .map(|response| Json(json!(response)))
         .map_err(|error| {
             (
-                StatusCode::UNPROCESSABLE_ENTITY,
+                status_code_for_error(&error),
                 Json(json!({
                     "error": error.message()
                 })),
             )
         })
+}
+
+fn status_code_for_error(error: &CheckServiceError) -> StatusCode {
+    match error {
+        CheckServiceError::Validation(_)
+        | CheckServiceError::ImageProcessing(_)
+        | CheckServiceError::Scale(_) => StatusCode::UNPROCESSABLE_ENTITY,
+        CheckServiceError::Ocr(ocr_error) => match ocr_error {
+            OcrError::MissingApiKey => StatusCode::INTERNAL_SERVER_ERROR,
+            OcrError::Request(_) | OcrError::Api(_) => StatusCode::BAD_GATEWAY,
+            OcrError::NoText => StatusCode::UNPROCESSABLE_ENTITY,
+        },
+    }
 }
 
 async fn extract_image_request(
@@ -89,4 +108,27 @@ fn bad_request(message: &'static str) -> (StatusCode, Json<Value>) {
             "error": message
         })),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn maps_ocr_missing_api_key_to_500() {
+        let error = CheckServiceError::Ocr(OcrError::MissingApiKey);
+        assert_eq!(status_code_for_error(&error), StatusCode::INTERNAL_SERVER_ERROR);
+    }
+
+    #[test]
+    fn maps_ocr_api_errors_to_502() {
+        let error = CheckServiceError::Ocr(OcrError::Api("upstream error".to_owned()));
+        assert_eq!(status_code_for_error(&error), StatusCode::BAD_GATEWAY);
+    }
+
+    #[test]
+    fn keeps_validation_style_errors_as_422() {
+        let error = CheckServiceError::Scale("missing barcode coordinates".to_owned());
+        assert_eq!(status_code_for_error(&error), StatusCode::UNPROCESSABLE_ENTITY);
+    }
 }
