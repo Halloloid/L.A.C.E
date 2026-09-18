@@ -4,7 +4,10 @@ use validator::Validate;
 
 use crate::models::check::{CheckImageRequest, CheckImageResponse, ScaleResponse};
 use crate::services::geometry::calculate_scale;
-use crate::services::{geometry::calculate_word_geometry, ocr::extract_text};
+use crate::services::{
+    geometry::calculate_word_geometry,
+    ocr::{OcrError, extract_text},
+};
 
 const BLUR_VARIANCE_THRESHOLD: f64 = 10.0;
 
@@ -12,7 +15,7 @@ const BLUR_VARIANCE_THRESHOLD: f64 = 10.0;
 pub enum CheckServiceError {
     Validation(validator::ValidationErrors),
     ImageProcessing(String),
-    Ocr(String),
+    Ocr(OcrError),
     Scale(String),
 }
 
@@ -21,7 +24,7 @@ impl CheckServiceError {
         match self {
             Self::Validation(errors) => format!("Invalid image upload: {errors}"),
             Self::ImageProcessing(message) => message.clone(),
-            Self::Ocr(message) => format!("OCR processing failed: {message}"),
+            Self::Ocr(error) => format!("OCR processing failed: {error}"),
             Self::Scale(message) => format!("Scale calculation failed: {message}"),
         }
     }
@@ -50,7 +53,7 @@ pub async fn check_service(
 
     let ocr_data = extract_text(&request.image, &request.filename, &request.content_type)
         .await
-        .map_err(|error| CheckServiceError::Ocr(error.to_string()))?;
+        .map_err(CheckServiceError::Ocr)?;
     let ocr_text = ocr_data
         .parsed_results
         .iter()
