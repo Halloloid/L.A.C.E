@@ -2,10 +2,13 @@ use reqwest::{
     Client,
     multipart::{Form, Part},
 };
+use std::{sync::OnceLock, time::Duration};
 
 use crate::models::ocr::OcrSpaceResponse;
 
 const OCR_SPACE_ENDPOINT: &str = "https://api.ocr.space/parse/image";
+const OCR_TIMEOUT_SECONDS: u64 = 30;
+static OCR_CLIENT: OnceLock<Client> = OnceLock::new();
 
 #[derive(Debug, thiserror::Error)]
 pub enum OcrError {
@@ -42,7 +45,7 @@ pub async fn extract_text(
         .text("scale", "true")
         .text("OCREngine", "2");
 
-    let response = Client::new()
+    let response = ocr_client()
         .post(OCR_SPACE_ENDPOINT)
         .header("apikey", api_key)
         .multipart(form)
@@ -83,4 +86,13 @@ fn format_error_message(error: Option<&serde_json::Value>) -> String {
         Some(value) => value.to_string(),
         None => "OCR.space could not process the image".to_owned(),
     }
+}
+
+fn ocr_client() -> &'static Client {
+    OCR_CLIENT.get_or_init(|| {
+        Client::builder()
+            .timeout(Duration::from_secs(OCR_TIMEOUT_SECONDS))
+            .build()
+            .expect("failed to construct OCR HTTP client")
+    })
 }
