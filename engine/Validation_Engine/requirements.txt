@@ -1,0 +1,11 @@
+fastapi>=0.110
+uvicorn[standard]>=0.29
+pydantic>=2.6
+rapidfuzz>=3.6
+python-dateutil>=2.9
+
+# Uncomment once you're ready to swap in real entity extraction —
+# needs a network path to download model weights on first run:
+# gliner>=0.2
+# torch>=2.2
+
