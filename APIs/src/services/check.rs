@@ -4,6 +4,7 @@ use validator::Validate;
 
 use crate::models::check::{CheckImageRequest, CheckImageResponse, ScaleResponse};
 use crate::services::geometry::calculate_scale;
+use crate::services::text_order::reconstruct_reading_order;
 use crate::services::{
     geometry::calculate_word_geometry,
     ocr::{OcrError, extract_text},
@@ -45,6 +46,7 @@ pub async fn check_service(
             blur: true,
             message: "Image is blurry. Please capture or upload a clearer image.",
             ocr_text: None,
+            ocr_ordered_text: None,
             ocr_data: None,
             geometry: None,
             scale: None,
@@ -61,6 +63,7 @@ pub async fn check_service(
         .filter(|text| !text.trim().is_empty())
         .collect::<Vec<_>>()
         .join("\n");
+    let ocr_ordered_text = reconstruct_reading_order(&ocr_data);
     let geometry = calculate_word_geometry(&ocr_data);
     let scale = calculate_scale(
         &geometry,
@@ -81,6 +84,7 @@ pub async fn check_service(
         blur: false,
         message: "Image quality accepted and OCR completed.",
         ocr_text: Some(ocr_text),
+        ocr_ordered_text,
         ocr_data: Some(ocr_data),
         geometry: Some(geometry),
         scale: Some(ScaleResponse {

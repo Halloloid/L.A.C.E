@@ -29,6 +29,7 @@ pub struct CheckImageResponse {
     pub blur: bool,
     pub message: &'static str,
     pub ocr_text: Option<String>,
+    pub ocr_ordered_text: Option<String>,
     pub ocr_data: Option<OcrSpaceResponse>,
     pub geometry: Option<Vec<WordGeometry>>,
     pub scale: Option<ScaleResponse>,
