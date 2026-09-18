@@ -3,6 +3,7 @@ use validator::{Validate, ValidationError};
 
 use super::geometry::{PhysicalWordMeasurement, WordGeometry};
 use super::ocr::OcrSpaceResponse;
+use super::validation::ValidationResponse;
 
 const MAX_IMAGE_SIZE_BYTES: usize = 10 * 1024 * 1024;
 
@@ -33,6 +34,8 @@ pub struct CheckImageResponse {
     pub ocr_data: Option<OcrSpaceResponse>,
     pub geometry: Option<Vec<WordGeometry>>,
     pub scale: Option<ScaleResponse>,
+    pub validation: Option<ValidationResponse>,
+    pub validation_error: Option<String>,
 }
 
 #[derive(Debug, serde::Serialize)]

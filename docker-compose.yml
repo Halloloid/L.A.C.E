@@ -1,1 +1,22 @@
-.
+services:
+  apis:
+    build:
+      context: ./APIs
+    ports:
+      - "3000:3000"
+    environment:
+      - OCR_SPACE_API_KEY=${OCR_SPACE_API_KEY}
+      # Container-to-container hostname (Compose's built-in DNS), not
+      # localhost — the Python service isn't reachable at 127.0.0.1 from
+      # inside the apis container.
+      - VALIDATION_ENGINE_URL=http://validation-engine:8001
+    depends_on:
+      - validation-engine
+    restart: unless-stopped
+
+  validation-engine:
+    build:
+      context: ./engine/Validation_Engine
+    ports:
+      - "8001:8001"
+    restart: unless-stopped

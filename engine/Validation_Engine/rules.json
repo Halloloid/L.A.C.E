@@ -1,0 +1,68 @@
+{
+  "_meta": {
+    "note": "Legal Metrology (Packaged Commodities) Rules, 2011 — thresholds below are configurable so your team can verify each figure against the current official gazette text before this is used for real compliance decisions. Do not treat these numbers as pre-verified legal fact.",
+    "version": "0.1.0"
+  },
+
+  "font_height_tiers_mm": {
+    "_note": "Minimum standard character height for MRP / net quantity declaration, tiered by declared net quantity. Verify exact cutoffs and units (Rule 6 / Second Schedule) before production use.",
+    "tiers": [
+      { "max_quantity_g_or_ml": 200,  "min_font_height_mm": 1.0 },
+      { "max_quantity_g_or_ml": 1000, "min_font_height_mm": 2.0 },
+      { "max_quantity_g_or_ml": null, "min_font_height_mm": 4.0 }
+    ],
+    "warning_tolerance_ratio": 0.9
+  },
+
+  "mandatory_declarations": {
+    "_note": "Each phrase group is matched with fuzzy string matching (RapidFuzz) against the full OCR text — any one alias in a group counts as satisfying that declaration.",
+    "groups": [
+      {
+        "id": "mrp_tax_inclusive",
+        "label": "MRP inclusive-of-taxes statement",
+        "aliases": ["MRP inclusive of all taxes", "Maximum Retail Price inclusive of all taxes", "MRP incl. of all taxes"],
+        "min_score": 80,
+        "severity": "fail"
+      },
+      {
+        "id": "manufacturer_or_packer",
+        "label": "Manufacturer / Packer / Importer name and address",
+        "aliases": ["Manufactured by", "Marketed by", "Packed by", "Imported by"],
+        "min_score": 75,
+        "severity": "fail"
+      },
+      {
+        "id": "consumer_care",
+        "label": "Consumer care detail",
+        "aliases": ["Consumer Care", "Customer Care", "For complaints contact", "Consumer Complaints"],
+        "min_score": 75,
+        "severity": "warning"
+      },
+      {
+        "id": "country_of_origin",
+        "label": "Country of origin",
+        "aliases": ["Country of Origin", "Made in India", "Product of India"],
+        "min_score": 75,
+        "severity": "warning"
+      }
+    ]
+  },
+
+  "net_quantity": {
+    "allowed_units": ["g", "kg", "ml", "l", "mg", "gm"],
+    "regex": "(?i)(\\d+(?:\\.\\d+)?)\\s*(kg|g|gm|mg|ml|l)\\b"
+  },
+
+  "mrp": {
+    "regex": "(?i)(?:mrp|m\\.r\\.p\\.?|maximum retail price)[:\\s₹rs.]*([0-9]+(?:\\.[0-9]{1,2})?)"
+  },
+
+  "pin_code": {
+    "regex": "\\b([1-9][0-9]{5})\\b"
+  },
+
+  "manufacturing_date": {
+    "max_age_years_warning": 3,
+    "formats_hint": ["MM/YYYY", "DD/MM/YYYY", "Mon YYYY", "DD Mon YYYY"]
+  }
+}
