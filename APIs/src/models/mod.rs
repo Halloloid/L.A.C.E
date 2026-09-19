@@ -1,4 +1,3 @@
-pub mod auth;
 pub mod check;
 pub mod geometry;
 pub mod inspection;

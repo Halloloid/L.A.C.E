@@ -13,8 +13,6 @@ pub fn main_router(pool: PgPool) -> Router {
     Router::new()
         .route("/health", get(health))
         .route("/check", post(check_image))
-        .route("/auth/login", post(login))
-        .route("/me", get(me))
         .route(
             "/inspections",
             post(create_inspection).get(list_inspections),

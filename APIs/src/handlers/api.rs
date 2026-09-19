@@ -7,14 +7,13 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 use sqlx::{Column, PgPool, Row};
 
+use crate::handlers::check::extract_image_request;
 use crate::{
-    models::{
-        auth::{LoginRequest, LoginResponse, UserResponse},
-        inspection::{
-            CalibrationRequest, InspectionCreated, InspectionStatus, InspectionStatusResponse,
-        },
+    models::inspection::{
+        CalibrationRequest, InspectionCreated, InspectionStatus, InspectionStatusResponse,
     },
     repositories::inspection,
+    services::check::check_service,
 };
 
 type ApiResult<T> = Result<Json<T>, (StatusCode, Json<Value>)>;
@@ -26,107 +25,32 @@ fn db<T>(r: Result<T, sqlx::Error>) -> ApiResult<T> {
         .map_err(|e| err(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))
 }
 
-pub async fn login(
-    State(pool): State<PgPool>,
-    Json(_request): Json<LoginRequest>,
-) -> ApiResult<LoginResponse> {
-    let (id, name, email, role) = inspection::ensure_demo_user(&pool)
-        .await
-        .map_err(|e| err(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-    Ok(Json(LoginResponse {
-        token: "demo-token".into(),
-        user: UserResponse {
-            id,
-            name,
-            email,
-            role,
-        },
-    }))
-}
-pub async fn me(State(pool): State<PgPool>) -> ApiResult<UserResponse> {
-    let (id, name, email, role) = inspection::ensure_demo_user(&pool)
-        .await
-        .map_err(|e| err(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-    Ok(Json(UserResponse {
-        id,
-        name,
-        email,
-        role,
-    }))
-}
-
 pub async fn create_inspection(
     State(pool): State<PgPool>,
     mut multipart: Multipart,
 ) -> ApiResult<InspectionCreated> {
-    let mut image = None;
-    let mut filename = None;
-    let mut content_type = "application/octet-stream".to_string();
-    let mut category = "general".to_string();
-    let mut product = None;
-    let mut brand = None;
-    while let Some(field) = multipart
-        .next_field()
+    let request = extract_image_request(&mut multipart).await?;
+    let content_type = request.content_type.clone();
+    let image_bytes = request.image.clone();
+
+    let check_res = check_service(request)
         .await
-        .map_err(|e| err(StatusCode::BAD_REQUEST, e.to_string()))?
-    {
-        let name = field.name().unwrap_or("").to_string();
-        match name.as_str() {
-            "image" => {
-                filename = field.file_name().map(str::to_owned);
-                content_type = field
-                    .content_type()
-                    .unwrap_or("application/octet-stream")
-                    .to_string();
-                image = Some(
-                    field
-                        .bytes()
-                        .await
-                        .map_err(|e| err(StatusCode::BAD_REQUEST, e.to_string()))?
-                        .len() as i64,
-                );
-            }
-            "category" => {
-                category = field
-                    .text()
-                    .await
-                    .map_err(|e| err(StatusCode::BAD_REQUEST, e.to_string()))?
-            }
-            "product" | "productName" => {
-                product = Some(
-                    field
-                        .text()
-                        .await
-                        .map_err(|e| err(StatusCode::BAD_REQUEST, e.to_string()))?,
-                )
-            }
-            "brand" => {
-                brand = Some(
-                    field
-                        .text()
-                        .await
-                        .map_err(|e| err(StatusCode::BAD_REQUEST, e.to_string()))?,
-                )
-            }
-            _ => {}
-        }
-    }
-    let size = image.ok_or_else(|| err(StatusCode::BAD_REQUEST, "Missing image field"))?;
-    let (id, _) = inspection::create_inspection(
-        &pool,
-        filename.as_deref(),
-        &content_type,
-        size,
-        &category,
-        product.as_deref(),
-        brand.as_deref(),
-    )
-    .await
-    .map_err(|e| err(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-    Ok(Json(InspectionCreated {
-        id,
-        status: InspectionStatus::Processing,
-    }))
+        .map_err(|e| err(StatusCode::UNPROCESSABLE_ENTITY, e.message()))?;
+
+    let (id, status_str) =
+        inspection::create_inspection(&pool, &check_res, &image_bytes, &content_type)
+            .await
+            .map_err(|e| err(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let status = match status_str.as_str() {
+        "compliant" => InspectionStatus::Compliant,
+        "warning" => InspectionStatus::Warning,
+        "noncompliant" => InspectionStatus::Noncompliant,
+        "failed" => InspectionStatus::Failed,
+        _ => InspectionStatus::Processing,
+    };
+
+    Ok(Json(InspectionCreated { id, status }))
 }
 
 pub async fn calibrate(

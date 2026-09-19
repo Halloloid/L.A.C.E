@@ -24,29 +24,32 @@ pub struct ProductSummary {
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Declarations {
+    #[serde(alias = "brand")]
     pub brand: Option<String>,
-    #[serde(rename = "productName")]
+    #[serde(rename = "productName", alias = "product_name")]
     pub product_name: Option<String>,
     pub tagline: Option<String>,
+    #[serde(alias = "manufacturer_name")]
     pub manufacturer: Option<String>,
-    #[serde(rename = "netQuantity")]
+    #[serde(rename = "netQuantity", alias = "net_quantity")]
     pub net_quantity: Option<String>,
     pub mrp: Option<String>,
-    #[serde(rename = "mfgDate")]
+    #[serde(rename = "mfgDate", alias = "manufacturing_date")]
     pub manufacturing_date: Option<String>,
+    #[serde(alias = "consumer_care_detail")]
     pub consumer_care: Option<String>,
     pub batch: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Measurement {
-    #[serde(rename = "referenceMm")]
+    #[serde(rename = "referenceMm", alias = "reference_mm")]
     pub reference_mm: f64,
-    #[serde(rename = "scaleMmPerPx")]
+    #[serde(rename = "scaleMmPerPx", alias = "scale_mm_per_px")]
     pub scale_mm_per_px: f64,
-    #[serde(rename = "detectedTextPx")]
+    #[serde(rename = "detectedTextPx", alias = "detected_text_px")]
     pub detected_text_px: f64,
-    #[serde(rename = "physicalTextMm")]
+    #[serde(rename = "physicalTextMm", alias = "physical_text_mm")]
     pub physical_text_mm: f64,
 }
 

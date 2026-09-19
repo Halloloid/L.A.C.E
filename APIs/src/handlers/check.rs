@@ -41,7 +41,7 @@ fn status_code_for_error(error: &CheckServiceError) -> StatusCode {
     }
 }
 
-async fn extract_image_request(
+pub(crate) async fn extract_image_request(
     multipart: &mut Multipart,
 ) -> Result<CheckImageRequest, (StatusCode, Json<Value>)> {
     let mut image = None;
