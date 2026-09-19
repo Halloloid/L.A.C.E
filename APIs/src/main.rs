@@ -1,4 +1,4 @@
-use apis::config::server_config;
+use apis::config::{db_config::connect_db, server_config};
 
 #[tokio::main]
 async fn main() {
@@ -11,5 +11,9 @@ async fn main() {
         )
         .init();
 
-    server_config::run_server().await;
+    let pool = connect_db().await.expect("Failed To Connect To DB");
+
+    println!("Connected to DB!");
+
+    server_config::run_server(pool).await;
 }

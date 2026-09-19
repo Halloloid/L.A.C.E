@@ -158,6 +158,31 @@ Image Upload → Quality Check → OCR → Text Extraction
 ### Data & Database
 - **PostgreSQL** - Audit logs and inspection history
 
+### Local database setup
+
+The API uses SQLx migrations and PostgreSQL. Start the complete local stack with:
+
+```powershell
+docker compose up --build
+```
+
+The Compose stack creates a persistent `lace-postgres-data` volume and runs the
+migrations automatically when the API starts. For running the Rust API outside
+Compose, set `DATABASE_URL` to a local PostgreSQL instance before starting it.
+
+The inspection schema stores:
+
+- Inspection identity, status, pipeline stage, and timestamps.
+- Product and inspector references.
+- Flexible declarations and measurement JSON.
+- Individual rule results and violations.
+- Uploaded-image metadata and processing-stage events.
+
+The database is deliberately separate from the frontend response format:
+PostgreSQL stores normalized queryable records plus JSON fields for evolving OCR
+and validation details, while the API assembles the `Inspection` response
+expected by the dashboard and report screens.
+
 
 ---
 
