@@ -1,6 +1,7 @@
 /APIs/target
-
-
+/APIs/AGENTS.md
+/APIs/.env
+.env
 env/
 .venv/
 __pycache__/

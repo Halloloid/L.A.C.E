@@ -86,6 +86,13 @@ for demoing the *rest* of the pipeline (validators, decision logic) without
 needing a GPU or model download. Don't quote its extraction accuracy in your
 pitch — GLiNER is what you actually built for messy real-world OCR text.
 
+**Docker note**: `Dockerfile` in this directory installs `gliner`/`torch`
+(CPU wheels) and pre-downloads the model weights at *build* time, so the
+container always runs real GLiNER and needs no network access at runtime.
+If you're running this service outside Docker (plain `uvicorn`), you still
+need the manual `pip install` above to get GLiNER instead of the regex
+fallback.
+
 ## Tuning without redeploying
 
 All thresholds — font-height tiers, which declaration phrases are mandatory,

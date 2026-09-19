@@ -4,10 +4,13 @@ use validator::Validate;
 
 use crate::models::check::{CheckImageRequest, CheckImageResponse, ScaleResponse};
 use crate::services::geometry::calculate_scale;
+use crate::services::text_order::reconstruct_reading_order;
+use crate::services::validation::{self as validation_engine};
 use crate::services::{
     geometry::calculate_word_geometry,
     ocr::{OcrError, extract_text},
 };
+use uuid::Uuid;
 
 const BLUR_VARIANCE_THRESHOLD: f64 = 10.0;
 
@@ -45,9 +48,12 @@ pub async fn check_service(
             blur: true,
             message: "Image is blurry. Please capture or upload a clearer image.",
             ocr_text: None,
+            ocr_ordered_text: None,
             ocr_data: None,
             geometry: None,
             scale: None,
+            validation: None,
+            validation_error: None,
         });
     }
 
@@ -61,6 +67,7 @@ pub async fn check_service(
         .filter(|text| !text.trim().is_empty())
         .collect::<Vec<_>>()
         .join("\n");
+    let ocr_ordered_text = reconstruct_reading_order(&ocr_data);
     let geometry = calculate_word_geometry(&ocr_data);
     let scale = calculate_scale(
         &geometry,
@@ -74,6 +81,19 @@ pub async fn check_service(
         )
     })?;
 
+    let raw_ocr_text_for_engine = ocr_ordered_text.clone().unwrap_or_else(|| ocr_text.clone());
+    let validation_request = validation_engine::build_request(
+        Uuid::new_v4().to_string(),
+        raw_ocr_text_for_engine,
+        &ocr_data,
+        &scale,
+    );
+    let (validation, validation_error) =
+        match validation_engine::validate(&validation_request).await {
+            Ok(response) => (Some(response), None),
+            Err(error) => (None, Some(error.to_string())),
+        };
+
     Ok(CheckImageResponse {
         status: "received",
         filename: request.filename,
@@ -81,6 +101,7 @@ pub async fn check_service(
         blur: false,
         message: "Image quality accepted and OCR completed.",
         ocr_text: Some(ocr_text),
+        ocr_ordered_text,
         ocr_data: Some(ocr_data),
         geometry: Some(geometry),
         scale: Some(ScaleResponse {
@@ -91,6 +112,8 @@ pub async fn check_service(
             calibration_confidence: scale.calibration_confidence,
             word_measurements: scale.words,
         }),
+        validation,
+        validation_error,
     })
 }
 

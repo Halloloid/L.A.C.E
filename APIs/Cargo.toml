@@ -22,3 +22,6 @@ tracing-subscriber = {version="0.3.23",features=["env-filter"]}
 thiserror = "2.0.17"
 uuid = {version="1.26.1",features=["serde"]}
 validator ={version = "0.21.0",features=["derive"]}
+jsonwebtoken = { version = "10.4.0", features = ["rust_crypto"] }
+base64 = "0.22.1"
+bcrypt = "0.19.2"

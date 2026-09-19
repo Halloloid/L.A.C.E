@@ -41,7 +41,7 @@ fn status_code_for_error(error: &CheckServiceError) -> StatusCode {
     }
 }
 
-async fn extract_image_request(
+pub(crate) async fn extract_image_request(
     multipart: &mut Multipart,
 ) -> Result<CheckImageRequest, (StatusCode, Json<Value>)> {
     let mut image = None;
@@ -117,7 +117,10 @@ mod tests {
     #[test]
     fn maps_ocr_missing_api_key_to_500() {
         let error = CheckServiceError::Ocr(OcrError::MissingApiKey);
-        assert_eq!(status_code_for_error(&error), StatusCode::INTERNAL_SERVER_ERROR);
+        assert_eq!(
+            status_code_for_error(&error),
+            StatusCode::INTERNAL_SERVER_ERROR
+        );
     }
 
     #[test]
@@ -129,6 +132,9 @@ mod tests {
     #[test]
     fn keeps_validation_style_errors_as_422() {
         let error = CheckServiceError::Scale("missing barcode coordinates".to_owned());
-        assert_eq!(status_code_for_error(&error), StatusCode::UNPROCESSABLE_ENTITY);
+        assert_eq!(
+            status_code_for_error(&error),
+            StatusCode::UNPROCESSABLE_ENTITY
+        );
     }
 }

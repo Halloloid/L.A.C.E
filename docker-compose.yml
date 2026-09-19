@@ -1,1 +1,45 @@
-.
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: lace
+      POSTGRES_USER: lace
+      POSTGRES_PASSWORD: lace_dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - lace-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lace -d lace"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  apis:
+    build:
+      context: ./APIs
+    ports:
+      - "3000:3000"
+    environment:
+      - OCR_SPACE_API_KEY=${OCR_SPACE_API_KEY}
+      - DATABASE_URL=postgres://lace:lace_dev_password@postgres:5432/lace
+      # Container-to-container hostname (Compose's built-in DNS), not
+      # localhost — the Python service isn't reachable at 127.0.0.1 from
+      # inside the apis container.
+      - VALIDATION_ENGINE_URL=http://validation-engine:8001
+    depends_on:
+      postgres:
+        condition: service_healthy
+      validation-engine:
+        condition: service_started
+    restart: unless-stopped
+
+  validation-engine:
+    build:
+      context: ./engine/Validation_Engine
+    ports:
+      - "8001:8001"
+    restart: unless-stopped
+
+volumes:
+  lace-postgres-data:

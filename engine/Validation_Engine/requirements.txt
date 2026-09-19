@@ -4,8 +4,16 @@ pydantic>=2.6
 rapidfuzz>=3.6
 python-dateutil>=2.9
 
-# Uncomment once you're ready to swap in real entity extraction —
-# needs a network path to download model weights on first run:
-# gliner>=0.2
-# torch>=2.2
+# Real zero-shot entity extraction. CPU-only PyTorch wheels via the extra
+# index below — the default CUDA build is several GB larger and unnecessary
+# for this model's inference workload.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch>=2.2
+gliner>=0.2
 
+# gliner_multi-v2.1's tokenizer (mdeberta-v3-base) is SentencePiece-based;
+# transformers needs protobuf installed to read the raw .model file when
+# converting it to a fast tokenizer. Without this it fails over to a
+# tiktoken-based path that also isn't installed, and the load errors out.
+protobuf>=4.25
+sentencepiece>=0.2.0
