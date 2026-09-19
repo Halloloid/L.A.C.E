@@ -1,0 +1,100 @@
+:root {
+  color-scheme: light;
+
+  /* =========================================================
+     L.A.C.E. light theme — warm off-white page, white cards,
+     dark forest-green brand. Sampled from the product screens.
+     ========================================================= */
+
+  /* ---- Surfaces ---- */
+  --paper-0: #ffffff;   /* cards, panels, sidebar */
+  --paper-1: #f6f5f0;   /* base page background (warm off-white) */
+  --paper-2: #eef0ea;   /* recessed wells, tracks, image mats */
+
+  /* ---- Text ---- */
+  --ink-900: #17201c;   /* headings and primary text */
+  --ink-500: #707871;   /* secondary / subtitle / metadata text */
+  --ink-300: #9ba39b;   /* inactive numbers, placeholders */
+
+  /* ---- Lines ---- */
+  --line-100: #e4e7e2;  /* default hairline borders / dividers */
+  --line-200: #d0d6ce;  /* stronger border, e.g. inputs and toggle tracks */
+
+  /* ---- Brand ---- */
+  --green-900: #12332a; /* deepest green — gradient end, hover */
+  --green-800: #173e31; /* primary brand green: buttons, active nav, FAB */
+  --green-600: #297750; /* success: PASS, compliance ring, active dot */
+  --gold-500:  #e9ca34; /* package / label accent */
+
+  /* ---- Overlays and glow ---- */
+  --overlay-bg: rgba(255, 255, 255, 0.94);   /* floating badges over imagery */
+  --glow: rgba(23, 62, 49, 0.10);            /* soft halo around a selected item */
+
+  /* ---- Semantic tokens used by every component ----
+     (The original variable names are kept so existing styles keep working.) */
+  --ivory: var(--paper-1);            /* app background */
+  --paper: var(--paper-0);            /* raised surfaces */
+  --well: var(--paper-2);             /* recessed surfaces */
+  --ink: var(--ink-900);              /* primary text */
+  --stone: var(--ink-500);            /* secondary text */
+  --stone-soft: var(--ink-300);       /* tertiary text, placeholders */
+  --line: var(--line-100);            /* hairline borders/dividers */
+  --line-strong: var(--line-200);     /* stronger border, e.g. inputs */
+
+  --forest: var(--green-800);         /* primary accent */
+  --forest-deep: var(--green-900);    /* accent text / active state */
+  --forest-tint: rgba(23, 62, 49, 0.07);   /* soft accent wash */
+  --lime: var(--green-800);           /* emphasis chips (e.g. Scan Product nav link) */
+  --on-forest: #ffffff;               /* text that sits on top of the accent */
+  --gradient-green: linear-gradient(135deg, #1d4a3a 0%, #12332a 100%);   /* buttons */
+  --gradient-hero: linear-gradient(160deg, #12332a 0%, #173e31 55%, #2c6b51 100%);   /* login banner */
+
+  --pass: var(--green-600);
+  --pass-bg: rgba(41, 119, 80, 0.12);
+  --warning: #b07407;
+  --warning-bg: rgba(176, 116, 7, 0.12);
+  --fail: #b3261e;
+  --fail-bg: rgba(179, 38, 30, 0.10);
+
+  /* ---- Measurement accents — restrained, technical ---- */
+  --measure: var(--green-800);
+  --measure-soft: rgba(23, 62, 49, 0.16);
+  --measure-blue: #2f6f8f;
+
+  /* ---- Type ---- */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* ---- Spacing scale ---- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --space-9: 96px;
+
+  /* ---- Radius ---- */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-full: 999px;
+
+  /* ---- Shadow — reserved for things that actually float above the page ---- */
+  --shadow-sm: 0 1px 2px rgba(23, 32, 28, 0.06);
+  --shadow-md: 0 12px 32px rgba(23, 32, 28, 0.10);
+  --shadow-lg: 0 24px 56px rgba(23, 32, 28, 0.14);
+
+  /* ---- Layout ---- */
+  --sidebar-w: 248px;
+  --topbar-h: 72px;
+  --bottomnav-h: 68px;
+  --container-max: 1240px;
+
+  /* ---- z-index ---- */
+  --z-nav: 100;
+  --z-overlay: 200;
+  --z-toast: 300;
+}
