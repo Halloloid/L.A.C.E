@@ -14,11 +14,19 @@ def _required_min_mm(base_qty: float | None, rules: dict) -> float:
     return tiers[-1]["min_font_height_mm"] if tiers else 1.0
 
 
+def _normalize(s: str) -> str:
+    """Strip all whitespace and lowercase for tolerant substring matching.
+    Handles the gap between normalized extracted values (e.g. '500g') and
+    raw OCR spans that may contain spaces ('Net Wt: 500 g')."""
+    return s.replace(" ", "").replace("\t", "").lower()
+
+
 def _find_field_for(text_fragment: str | None, fields: list[CalibratedField]) -> CalibratedField | None:
     if not text_fragment:
         return None
+    norm_frag = _normalize(text_fragment)
     for f in fields:
-        if text_fragment.lower() in f.text.lower():
+        if norm_frag in _normalize(f.text):
             return f
     return None
 

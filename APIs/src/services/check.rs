@@ -81,7 +81,7 @@ pub async fn check_service(
         )
     })?;
 
-    let raw_ocr_text_for_engine = ocr_ordered_text.clone().unwrap_or_else(|| ocr_text.clone());
+    let raw_ocr_text_for_engine = ocr_text.clone();
     let validation_request = validation_engine::build_request(
         Uuid::new_v4().to_string(),
         raw_ocr_text_for_engine,

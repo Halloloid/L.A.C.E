@@ -48,10 +48,14 @@ class RegexFallbackExtractor:
     # "MRP (incl. of all taxes) Rs 199.00" where other words sit between
     # the label and the actual number, which a single strict pattern misses.
     _mrp_keyword_re = re.compile(r"(?i)(?:mrp|m\.r\.p\.?|maximum retail price)")
-    _mrp_currency_prefixed_re = re.compile(r"(?i)(?:₹|rs\.?|inr)\s*([0-9]+(?:\.[0-9]{1,2})?)")
-    _mrp_bare_number_re = re.compile(r"([0-9]+(?:\.[0-9]{1,2})?)")
-    _MRP_SEARCH_WINDOW = 60  # chars to look ahead after the "MRP" keyword
-    _qty_re = re.compile(r"(?i)(?:net\s*(?:wt|weight|qty|quantity)?[:\s]*)?(\d+(?:\.\d+)?)\s*(kg|g|gm|mg|ml|l)\b")
+    _mrp_currency_prefixed_re = re.compile(r"(?i)(?:₹|rs\.?|inr)?\s*([0-9]+(?:\.[0-9]{1,2})?)")
+    _mrp_bare_number_re = re.compile(r"\b([0-9]+(?:\.[0-9]{1,2})?)\b")
+    _MRP_SEARCH_WINDOW = 120  # increased window to tolerate multi-line OCR layouts
+    
+    _qty_keyword_re = re.compile(r"(?i)(?:net\s*(?:wt|weight|qty|quantity)?)")
+    _qty_value_re = re.compile(r"(\d+(?:\.\d+)?)\s*(kg|g|gm|mg|ml|l)\b", re.IGNORECASE)
+    _QTY_SEARCH_WINDOW = 60
+
     _date_re = re.compile(
         r"(?i)(\d{1,2}[/\-]\d{4}|\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4}|"
         r"(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s*\d{4})"
@@ -66,18 +70,42 @@ class RegexFallbackExtractor:
 
         window = text[keyword_match.end(): keyword_match.end() + self._MRP_SEARCH_WINDOW]
 
-        # Prefer a number that's actually marked with a currency symbol —
-        # avoids accidentally grabbing an unrelated number (like a pack
-        # count) that happens to sit between "MRP" and the real price.
         currency_match = self._mrp_currency_prefixed_re.search(window)
         if currency_match:
-            return currency_match.group(1)
+            # ensure it's not just a stray single digit like '1' if there's a real price further down
+            val_str = currency_match.group(1)
+            # if we matched a small integer like '1' right after MRP, keep searching for a proper price if possible
+            if val_str == "1" or val_str == "0":
+                rest_window = window[currency_match.end():]
+                second_match = self._mrp_currency_prefixed_re.search(rest_window)
+                if second_match and float(second_match.group(1)) > 1:
+                    return second_match.group(1)
+            return val_str
 
-        # Fall back to the first bare number in the window if no currency
-        # marker is found — better than returning nothing, but less certain.
         bare_match = self._mrp_bare_number_re.search(window)
         if bare_match:
             return bare_match.group(1)
+
+        return None
+
+    def _extract_net_quantity(self, text: str) -> str | None:
+        keyword_match = self._qty_keyword_re.search(text)
+        if not keyword_match:
+            # Fallback: try direct regex search anywhere if keyword wasn't found
+            m = re.search(r"(?i)(\d+(?:\.\d+)?)\s*(kg|g|gm|mg|ml|l)\b", text)
+            if m:
+                return f"{m.group(1)}{m.group(2).lower()}"
+            return None
+
+        window = text[keyword_match.end(): keyword_match.end() + self._QTY_SEARCH_WINDOW]
+        m = self._qty_value_re.search(window)
+        if m:
+            return f"{m.group(1)}{m.group(2).lower()}"
+
+        # If not found immediately after keyword, check global search as fallback
+        m_global = re.search(r"(?i)(\d+(?:\.\d+)?)\s*(kg|g|gm|mg|ml|l)\b", text)
+        if m_global:
+            return f"{m_global.group(1)}{m_global.group(2).lower()}"
 
         return None
 
@@ -88,9 +116,9 @@ class RegexFallbackExtractor:
         if mrp_value:
             out["mrp"] = mrp_value
 
-        m = self._qty_re.search(text)
-        if m:
-            out["net_quantity"] = f"{m.group(1)}{m.group(2).lower()}"
+        qty_value = self._extract_net_quantity(text)
+        if qty_value:
+            out["net_quantity"] = qty_value
 
         m = self._date_re.search(text)
         if m:
@@ -105,19 +133,22 @@ class RegexFallbackExtractor:
             out["batch_number"] = m.group(1)
 
         # Address is hard to regex reliably — grab the line containing the PIN
-        # as a crude stand-in so the address validator has something to check.
+        # plus preceding address lines for complete context.
         if "pin_code" in out:
-            for line in text.splitlines():
+            lines = text.splitlines()
+            for i, line in enumerate(lines):
                 if out["pin_code"] in line:
-                    out["address"] = line.strip()
+                    start_idx = max(0, i - 2)
+                    address_lines = [l.strip() for l in lines[start_idx: i + 1] if l.strip()]
+                    out["address"] = ", ".join(address_lines)
                     break
 
         return out
 
 
-class GLiNERExtractor:
-    """Real zero-shot extractor. Import and model load are lazy so importing
-    this module never fails just because torch/gliner aren't installed yet."""
+class GLiNERExtractor(RegexFallbackExtractor):
+    """Real zero-shot extractor with RegexFallbackExtractor as a robust fallback
+    for fields that GLiNER misses on messy OCR."""
 
     def __init__(self, model_name: str = "urchade/gliner_multi-v2.1", threshold: float = 0.4):
         from gliner import GLiNER  # deferred import
@@ -132,7 +163,17 @@ class GLiNERExtractor:
             # keep the highest-scoring span per label
             if key not in out or p.get("score", 0) > out[key].get("_score", 0):
                 out[key] = {"text": p["text"], "_score": p.get("score", 0)}
-        return {k: v["text"] for k, v in out.items()}
+        
+        # Convert to plain text dict
+        result = {k: v["text"] for k, v in out.items()}
+
+        # Fallback fill-in using RegexFallbackExtractor methods if critical fields were missed by GLiNER
+        regex_fallback = super().extract(text)
+        for k, v in regex_fallback.items():
+            if k not in result or not result[k]:
+                result[k] = v
+
+        return result
 
 
 def get_extractor() -> Extractor:
