@@ -7,6 +7,7 @@ L.A.C.E (Legal Automated Compliance Engine) is an intelligent inspection and com
 ---
 
 ## System Architecture
+<img width="1751" height="809" alt="white_architecture drawio" src="https://github.com/user-attachments/assets/5dda8db6-3d78-463b-a9b7-f0a4867efa4d" />
 
 ### Architecture Layers
 
