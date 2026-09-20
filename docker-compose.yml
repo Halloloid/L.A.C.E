@@ -39,6 +39,8 @@ services:
       context: ./engine/Validation_Engine
     ports:
       - "8001:8001"
+    volumes:
+      - ./engine/Validation_Engine:/app
     restart: unless-stopped
 
 volumes:
