@@ -85,43 +85,7 @@ In India, regulatory compliance verification for product labels is a critical bu
 ## Architecture
 
 ### System Layers
-
-```
-┌─────────────────────────────────────────────────────┐
-│ 1. User/Inspection Interface Layer                  │
-│    (Dashboard, Image Upload, Results Display)       │
-└──────────────────┬──────────────────────────────────┘
-                   │
-┌──────────────────▼──────────────────────────────────┐
-│ 2. Application/Request Handling Layer               │
-│    (Routing, Pipeline Orchestration)                │
-└──────────────────┬──────────────────────────────────┘
-                   │
-┌──────────────────▼──────────────────────────────────┐
-│ 3. Image Quality Control Layer                      │
-│    (Blur Detection, Quality Scoring)                │
-└──────────────────┬──────────────────────────────────┘
-                   │
-┌──────────────────▼──────────────────────────────────┐
-│ 4. Vision/OCR Processing Layer                      │
-│    (Google Cloud Vision / PaddleOCR)                │
-└──────────────────┬──────────────────────────────────┘
-                   │
-┌──────────────────▼──────────────────────────────────┐
-│ 5. Deterministic Legal Validation Engine            │
-│    (Rule-based Compliance Checks)                   │
-└──────────────────┬──────────────────────────────────┘
-                   │
-┌──────────────────▼──────────────────────────────────┐
-│ 6. Geometry Processing/Deskewing Layer              │
-│    (Rotation Correction, Physical Calibration)      │
-└──────────────────┬──────────────────────────────────┘
-                   │
-┌──────────────────▼──────────────────────────────────┐
-│ 7. Verdict Reporting and Trust Layers               │
-│    (Final Decision, PDF Export)                     │
-└─────────────────────────────────────────────────────┘
-```
+<img width="1751" height="809" alt="white_architecture drawio" src="https://github.com/user-attachments/assets/6c1a4de0-0ec6-4f24-87e4-5d4d6de4b2a1" />
 
 ### Process Flow
 
