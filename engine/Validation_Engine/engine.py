@@ -15,7 +15,7 @@ import json
 from pathlib import Path
 
 from models import ValidationRequest, ValidationResponse, FieldVerdict
-from extractor import get_extractor
+from extractor import get_extractor, reconstruct_rows
 from validators.mrp import validate_mrp
 from validators.quantity import validate_net_quantity
 from validators.date import validate_manufacturing_date
@@ -50,7 +50,14 @@ class ValidationEngine:
                 "results below are extracted from a shaky OCR read, treat verdict with caution."
             )
 
-        entities = self.extractor.extract(request.raw_ocr_text)
+        # Build the geometric row structure from calibrated fields that
+        # actually have a bounding box — Rust should always provide one, but
+        # guard against it being absent (None) rather than crashing, since a
+        # field with no geometry simply can't take part in row clustering.
+        fields_as_dicts = [f.model_dump() for f in request.fields if f.bbox is not None]
+        rows = reconstruct_rows(fields_as_dicts) if fields_as_dicts else []
+
+        entities = self.extractor.extract(request.raw_ocr_text, rows=rows)
 
         field_verdicts: list[FieldVerdict] = [
             validate_mrp(entities, self.rules),
