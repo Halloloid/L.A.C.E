@@ -21,13 +21,13 @@
         "id": "mrp_tax_inclusive",
         "label": "MRP inclusive-of-taxes statement",
         "aliases": ["MRP inclusive of all taxes", "Maximum Retail Price inclusive of all taxes", "MRP incl. of all taxes"],
-        "min_score": 80,
+        "min_score": 75,
         "severity": "fail"
       },
       {
         "id": "manufacturer_or_packer",
         "label": "Manufacturer / Packer / Importer name and address",
-        "aliases": ["Manufactured by", "Marketed by", "Packed by", "Imported by"],
+        "aliases": ["Manufactured by", "Mfd. By", "Mfg. By", "Marketed by", "Mkt. By", "Packed by", "Pkd. By", "Imported by"],
         "min_score": 75,
         "severity": "fail"
       },
